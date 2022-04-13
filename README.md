@@ -1,7 +1,7 @@
 # Amazon Vine Analysis
 
 ## Project Overview
-The Amazon Vine program is a service that allows manufacturers and publishers to receive reviews for their products. Companies pay a small fee to Amazon and provide products to Amazon Vine members, who are then required to publish a review. The purpose of this project was to analyze one of the [Amazon Reviews](https://s3.amazonaws.com/amazon-reviews-pds/tsv/index.txt) datasets to determine if there is any bias toward favorable reviews from Vine members. The approach was to create an AWS RDS database in pgAdmin, use PySpark and Google Colab to perform ETL on the chosen dataset and upload the final dataframes into the tables of pgAdmin. Once the database was populated, analysis on the reviews was conducted to determine the total number of reviews, the number of 5-star reviews, and the percentage of 5-star reviews for the two types of review (paid vs unpaid). This analysis was first conducted in pgAdmin only to find out that the chosen dataset did not contain any Vine participants (dataset: mobile apps). A new dataset was chosen and the analysis was replicated using PySpark (dataset: pet products). Both are presented here for thuroughness but final results were only obtained from the PySpark analysis. These results are presented first.
+The Amazon Vine program is a service that allows manufacturers and publishers to receive reviews for their products. Companies pay a small fee to Amazon and provide products to Amazon Vine members, who are then required to publish a review. The purpose of this project was to analyze one of the [Amazon Reviews](https://s3.amazonaws.com/amazon-reviews-pds/tsv/index.txt) datasets to determine if there is any bias toward favorable reviews from Vine members. The approach was to create an AWS RDS database in pgAdmin, use PySpark and Google Colab to perform ETL on the chosen dataset and upload the final dataframes into the tables of pgAdmin. Once the database was populated, analysis on the reviews was conducted to determine the total number of reviews, the number of 5-star reviews, and the percentage of 5-star reviews for the two types of review (paid vs unpaid). This analysis was first conducted in pgAdmin only to find out that the chosen dataset did not contain any Vine participants (dataset: mobile apps). A new dataset was chosen and the analysis was replicated using PySpark (dataset: pet products). Both are presented here for thoroughness but final results were only obtained from the PySpark analysis. These results are presented first.
 
 ## PySpark Results
 
@@ -19,9 +19,9 @@ The Amazon Vine program is a service that allows manufacturers and publishers to
 This analysis revealed that there is no positive bias for reviews in the Vine program for Pet Products. The percentage of 5 star reviews for the Vine participating products was 15.72% lower than those who did not participate. This would suggest that participating in the Vine program does not generate a more positive outcome in the reviews for that specific product. 
 
 #### Further Analysis
-This analysis only considerd 5 star reviews as a bias indicator. Another approach could use the entire distribution to consider whether or not participating in the Vine program would generate a higher review on average (not just a 5-star review). A simple two-sample t-test of the mean reviews of the paid vs unpaid would reveal the statistical difference of the two subsets of data. This test would be able to establish using the entire distribution of reviews whether or not the Vine participants, on average, recieved a higher rating than those who are not participating in the program.
+This analysis only considered 5 star reviews as a bias indicator. Another approach could use the entire distribution to consider whether or not participating in the Vine program would generate a higher review on average (not just a 5-star review). A simple two-sample t-test of the mean reviews of the paid vs unpaid would reveal the statistical difference of the two subsets of data. This test would be able to establish using the entire distribution of reviews whether or not the Vine participants, on average, received a higher rating than those who are not participating in the program.
 
-This analysis could benefit from further investigation by re-running the analysis on only those reviews with a verified purchase to see if a verified purchase review changes anything.
+This analysis could benefit from further investigation by re-running the analysis on only those reviews with a verified purchase to see if a verified purchase review change anything.
 
 ### Code:
 ### Load Amazon Data -> Create DataFrame
@@ -276,8 +276,120 @@ print(f'The percentage of reviews from non-vine participants that are 5 stars is
     Total reviews: 35606 , 5 star reviews: 19444
     The percentage of reviews from non-vine participants that are 5 stars is 54.61%
 
-## PostgreSQL Database and Query Analysis
+## PostgreSQL Database and Query Analysis on the mobile app dataset
 
 ## Screenshot of the Vine Table
 
 ![vine table](/Images/PostgreSQL/vine_table.png)
+
+### Analysis
+```sql
+/*
+Filter the data and create a new DataFrame or table to 
+retrieve all the rows where the total_votes count is 
+equal to or greater than 20 to pick reviews that are 
+more likely to be helpful and to avoid having division 
+by zero errors later on.
+*/
+SELECT * 
+INTO vine_highvotes
+FROM vine_table
+WHERE vine_table.total_votes > 20;
+
+SELECT * FROM vine_highvotes
+LIMIT 10;
+```
+![greater than 20 votes](/Images/PostgreSQL/gt_20.png)
+
+```sql
+/*
+Filter the new DataFrame or table created in Step 1 and 
+create a new DataFrame or table to retrieve all the rows 
+where the number of helpful_votes divided by total_votes 
+is equal to or greater than 50%.
+*/
+
+SELECT *
+INTO vine_votes_gt50
+FROM vine_highvotes
+WHERE CAST(helpful_votes AS FLOAT)/CAST(total_votes AS FLOAT) >=0.5
+
+SELECT * FROM vine_votes_gt50
+LIMIT 10;
+```
+![50% helpful](/Images/PostgreSQL/helpful_votes_gt50%.png)
+
+## This is where we find out that there are actually no Vine participants in this dataset
+
+```sql
+/*
+Filter the DataFrame or table created in Step 2, 
+and create a new DataFrame or table that retrieves 
+all the rows where a review was written as part of the 
+Vine program
+*/
+
+SELECT *
+FROM vine_votes_gt50
+WHERE vine_votes_gt50.vine = 'Y';
+
+--Check to make sure there are no vine participants in the dataset
+
+SELECT *
+FROM vine_votes_gt50
+ORDER BY vine_votes_gt50.vine DESC;
+```
+![no vine](/Images/PostgreSQL/no_vine.png)
+![no vine](/Images/PostgreSQL/no_vine_verification.png)
+
+## Finish at least one half of the analysis
+```sql
+/*
+Determine the total number of reviews, the number of 5-star 
+reviews, and the percentage of 5-star reviews for the two 
+types of review 
+*/
+--Create a summary table to populate with the data
+CREATE TABLE Rating_Summary (
+	Ratings_Count float,
+	Total_Fives float,
+	Percent_Fives FLOAT GENERATED ALWAYS AS (100*(Total_Fives/Ratings_Count)) STORED
+);
+
+-- Get the total number of ratings and store it in a table
+SELECT COUNT(star_rating)
+INTO rating_count
+FROM vine_votes_gt50;
+
+SELECT * FROM rating_count;
+
+-- Get the total number of five-star ratings and store it in a table
+SELECT COUNT(star_rating)
+INTO five_star_count
+FROM vine_votes_gt50
+WHERE star_rating = 5;
+
+SELECT * FROM five_star_count;
+
+--Rename the columns to be able to cross-join them
+ALTER TABLE rating_count
+RENAME count TO "Total_Ratings";
+
+ALTER TABLE five_star_count
+RENAME count TO "Total_Fives";
+
+--Join the count tables for populating the summary table
+SELECT *
+INTO rating_temp
+FROM rating_count
+CROSS JOIN five_star_count;
+
+SELECT * FROM rating_temp;
+
+-- Populate the summary table
+INSERT INTO Rating_Summary (Ratings_Count, Total_Fives)
+SELECT * FROM rating_temp;
+
+SELECT * FROM Rating_Summary;
+```
+![Votes Summary](/Images/PostgreSQL/percent_5_votes.png)
