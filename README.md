@@ -16,12 +16,12 @@ The Amazon Vine program is a service that allows manufacturers and publishers to
 - The percentage of the reviews that are 5-star was 54.61%
 
 ## Summary
-This analysis revealed that there is no positive bias for reviews in the Vine program for Pet Products. The percentage of 5 star reviews for the Vine participating products was 15.72% lower than those who did not participate. This would suggest that participating in the Vine program does not generate a more positive outcome in the reviews for that specific product. 
+This analysis revealed that there is no positive bias for reviews in the Vine program for Pet Products. The percentage of 5 star reviews for the Vine participating products was 15.72% lower than those who did not participate. This would suggest that participating in the Vine program does not generate a more positive outcome in the reviews for these specific product. 
 
 #### Further Analysis
-This analysis only considered 5 star reviews as a bias indicator. Another approach could use the entire distribution to consider whether or not participating in the Vine program would generate a higher review on average (not just a 5-star review). A simple two-sample t-test of the mean reviews of the paid vs unpaid would reveal the statistical difference of the two subsets of data. This test would be able to establish using the entire distribution of reviews whether or not the Vine participants, on average, received a higher rating than those who are not participating in the program.
+This analysis only considered 5 star reviews as a bias indicator. Another approach could use the entire distribution to consider whether or not participating in the Vine program would generate a higher review on average (not just a 5-star review). A simple two-sample t-test of the mean reviews of the paid vs unpaid would reveal the statistical significance of the difference of the two subsets of data. This test would be able to establish using the entire distribution of reviews whether or not the Vine participants, on average, received a higher rating than those who are not participating in the program.
 
-This analysis could benefit from further investigation by re-running the analysis on only those reviews with a verified purchase to see if a verified purchase review change anything.
+This analysis could also benefit from further investigation by re-running the analysis on only those reviews with a verified purchase to see if a verified purchase review change anything.
 
 ### Code:
 ### Load Amazon Data -> Create DataFrame
